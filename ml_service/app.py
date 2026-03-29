@@ -1,5 +1,6 @@
 import asyncio
 import pandas as pd
+import numpy as np
 from typing import Any
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
@@ -19,31 +20,44 @@ from ml_service.metrics import (
 )
 
 from evidently.report import Report
-from evidently.presets import DataDriftPreset
+from evidently.metric_preset import DataDriftPreset
 from evidently.ui.workspace import RemoteWorkspace
 
 MODEL = Model()
 current_data_buffer = []
-EVIDENTLY_URL = 'http://158.160.2.37:8000/'
+EVIDENTLY_URL = 'http://158.160.2.37:8000'
 PROJECT_ID = '019d3623-92ea-73db-8932-a48c52d702b2'
 
 async def evidently_monitoring_task():
-    """Фоновая задача для отправки отчетов в Evidently"""
+    """Фоновая задача мониторинга"""
     while True:
-        await asyncio.sleep(600) 
+        await asyncio.sleep(60)
         if len(current_data_buffer) >= 10:
             try:
-                current_df = pd.DataFrame(current_data_buffer)
-                reference_df = current_df.copy() 
+
+                current_df = pd.DataFrame(current_data_buffer).fillna(0)
                 
+
+                numeric_cols = current_df.select_dtypes(include=[np.number]).columns
+                
+                reference_df = current_df.copy()
+                
+                if not numeric_cols.empty:
+                    noise = np.random.normal(0, 0.01, size=(len(reference_df), len(numeric_cols)))
+                    reference_df[numeric_cols] = reference_df[numeric_cols].astype(float) + noise
+                    current_df[numeric_cols] = current_df[numeric_cols].astype(float)
+
                 drift_report = Report(metrics=[DataDriftPreset()])
                 drift_report.run(reference_data=reference_df, current_data=current_df)
+
+                workspace = RemoteWorkspace(EVIDENTLY_URL.rstrip('/'))
+                workspace.add_report(PROJECT_ID, drift_report)
                 
-                workspace = RemoteWorkspace(EVIDENTLY_URL)
-                workspace.add_run(PROJECT_ID, drift_report)
+                print(f"Report sent for project {PROJECT_ID}")
                 current_data_buffer.clear()
+                
             except Exception as e:
-                print(f"Evidently error: {e}")
+                print(f"Evidently Error: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

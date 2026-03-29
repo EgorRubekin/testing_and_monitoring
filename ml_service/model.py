@@ -31,4 +31,5 @@ class Model:
 
     @property
     def features(self) -> list[str]:
-        return self.data.model.feature_names_in_
+        return self.data.model.feature_names_in_.tolist()
+        

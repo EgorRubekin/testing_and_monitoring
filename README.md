@@ -22,3 +22,27 @@ docker compose up --build
 
 Сервис будет доступен на `http://<ip>:1488`.
 
+
+Дашборд 
+![alt text](image.png)
+
+![alt text](image-1.png)
+
+![alt text](image-2.png)
+
+![alt text](image-3.png)
+
+Алерты
+
+![alt text](image-4.png)
+
+
+В телегу алерты приходят 
+
+![alt text](image-5.png)
+
+
+Прогнозы работают 
+
+![alt text](image-6.png)
+
